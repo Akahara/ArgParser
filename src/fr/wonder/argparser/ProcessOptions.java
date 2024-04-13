@@ -3,6 +3,7 @@ package fr.wonder.argparser;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -38,9 +39,11 @@ final class ProcessOptions {
 		try {
 			Constructor<?> constructor = clazz.getDeclaredConstructor();
 			if(!constructor.canAccess(null))
-				throw new InvalidDeclarationError("Option class " + clazz.getName() + " does not declare an empty constructor");
+				throw new InvalidDeclarationError("Option class " + clazz.getName() + " does not declare an empty constructor, did you make the class public?");
 			return constructor;
 		} catch (NoSuchMethodException | SecurityException e) {
+			if (clazz.getEnclosingClass() != null && !Modifier.isStatic(clazz.getModifiers()))
+				throw new InvalidDeclarationError("Option class " + clazz + " is a member class, make it static instead");
 			throw new InvalidDeclarationError("Option class " + clazz.getName() + " does not declare an empty constructor", e);
 		}
 	}
@@ -67,7 +70,7 @@ final class ProcessOptions {
 			String name = opt.name();
 			String shortand = opt.shorthand();
 			
-			if(!ArgParserHelper.canBeArgumentType(type, true))
+			if(!ArgParserHelper.canBeArgumentType(type, true, true))
 				throw new InvalidDeclarationError("Option of field " + f + " in option class " + clazz.getName() + " has invalid type " + type.getName());
 			if(!ArgParserHelper.canBeOptionName(name))
 				throw new InvalidDeclarationError("Name " + name + " in option class " + clazz.getName() + " cannot be an option on field " + f);

@@ -6,7 +6,7 @@ import fr.wonder.argparser.annotations.EntryPoint;
 import fr.wonder.argparser.annotations.InnerOptions;
 import fr.wonder.argparser.annotations.Option;
 import fr.wonder.argparser.annotations.OptionClass;
-import fr.wonder.argparser.tests.ProcessArguments.EnumFoo;
+import fr.wonder.argparser.tests.ProcessArgumentsGeneral.EnumFoo;
 import fr.wonder.argparser.utils.StringUtils;
 
 public class ProcessArgumentsRootEntry extends ArgParseTester {
@@ -34,7 +34,8 @@ public class ProcessArgumentsRootEntry extends ArgParseTester {
 
 	@OptionClass
 	public static class UnusedSubOptions {
-		@Option(name = "--abc") // collides with Options#val but that does not matter as this class is not used as an inneroption
+		// collides with Options#val but that does not matter as this class is not used as an inner option
+		@Option(name = "--abc")
 		public int suboption;
 	}
 	

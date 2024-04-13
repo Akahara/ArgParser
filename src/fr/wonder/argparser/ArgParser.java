@@ -6,6 +6,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -23,7 +24,7 @@ import fr.wonder.argparser.annotations.EntryPoint;
 import fr.wonder.argparser.annotations.Option;
 import fr.wonder.argparser.annotations.OptionClass;
 import fr.wonder.argparser.annotations.ProcessDoc;
-import fr.wonder.argparser.tests.ProcessArguments;
+import fr.wonder.argparser.tests.ProcessArgumentsGeneral;
 import fr.wonder.argparser.utils.ArrayOperator;
 import fr.wonder.argparser.utils.ErrorWrapper;
 import fr.wonder.argparser.utils.ErrorWrapper.WrappedException;
@@ -34,12 +35,11 @@ import fr.wonder.argparser.utils.StringUtils;
  * Utility to create command line interfaces.
  * 
  * <p>
- * The basic idea is to define entry points in a class and call
- * {@link #run(String[])} to run the right one with user-supplied arguments and
- * options.
+ * The basic idea is to define entry points in a class and call {@link #run(String[])}
+ *  to run the right one with user-supplied arguments and options.
  * 
  * <p>
- * Look into {@link ProcessArguments} for an example.
+ * Look into {@link ProcessArgumentsGeneral} for an example.
  * 
  * <p>
  * Note that reflection is heavily used, impacting performances. This utility is
@@ -51,45 +51,55 @@ import fr.wonder.argparser.utils.StringUtils;
  * <blockquote><code>
  * (command name) [options...] (entry point path) [arguments...]
  * </code></blockquote>
+ * 
  * For example:
  * <blockquote><code>
  * git --force -i add somedir1 somedir2
  * </code></blockquote>
- * Here {@code git} is the command, that part is not
- * handled by {@code ArgParser}. {@code --force} is a boolean long option,
- * {@code -i} is a boolean short option. {@code add} is an entry point path,
- * this implementation supports branching paths (= paths with multiple words).
- * {@code somedir} are arguments.
+ * Here {@code git} is the command, that part is not handled by {@code ArgParser}.
+ * {@code --force} is a boolean long option, {@code -i} is a boolean short option.
+ * {@code add} is an entry point path, this implementation supports branching paths
+ * (eg. paths with multiple words). {@code somedir} are arguments.
  * 
  * <ul>
- * <li>This implementation <b>does not</b> support options <i>after</i> the
- * entry point path.</li>
- * <li>Boolean short options can be combined ({@code -a -b} can be shortened to
- * {@code -ab}.</li>
+ * <li>Boolean options do not take argument ({@code -a} instead of {@code -a true})</li>
+ * <li>Boolean short options can be combined ({@code -a -b} can be shortened to {@code -ab}).</li>
+ * <li>It's currently impossible to have two option classes with options that have the same
+ *     name but only one is boolean, because we cannot know if the next argument is the value of
+ *     the option or not.</li>
  * </ul>
  * 
  * <p>
  * <h2>Anatomy of an entry point function</h2>
- * This one could be called using {@code mycommand myentrypoint somestring 42} :
+ * This one could be called using {@code mycommand myentrypoint somestring 42}:
  * <blockquote><pre>
  * {@literal @}EntryPoint(path = "myentrypoint")
  * public void myEntryPoint(String myStringArg, int myIntArg) {}
  * </pre></blockquote>
+ * 
  * <ul>
  * <li>See {@link EntryPoint} and {@link Argument} annotations.</li>
  * <li>Supported argument types are {@code String}, all native types (int,
- * float...), all wrapped native types (Integer, Float...), {@code File} and any
- * {@code enum} type.</li>
+ *     float...), all wrapped native types (Integer, Float...), {@code File} and any
+ *     {@code enum} type.</li>
  * </ul>
  * 
  * <p>
  * <h2>Working with paths and options</h2>
+ * Examples of entry paths ({@code git} is the command, there are no arguments or options)
+ * 
+ * <ul>
+ * <li>git add</li>
+ * <li>git lfs pull</li>
+ * <li>git lfs fetch</li>
+ * </ul>
+ * 
  * Entry points cannot overlap, use options or default values for arguments
  * instead. Entry points paths cannot be extended - there cannot be an entry
  * point accessible using {@code part1} and one using {@code part1 part2}
  * because {@code part2} would be interpreted as an argument.
  * <p>
- * Long options must start with two dashes ({@code --name}, short options
+ * Long options must start with two dashes ({@code --name}), short options
  * must start with a single dash and end with a single characted ({@code -v}).
  * <p>
  * {@code --help}, {@code help} and {@code ?} are built-in to display help
@@ -101,12 +111,12 @@ import fr.wonder.argparser.utils.StringUtils;
  * <p>
  * <h2>Options</h2>
  * Options are defined in Option Classes using {@link OptionClass}. See the
- * examples. TODO comment ArgParser options
+ * examples.
  * 
  * <p>
  * <h2>Implementation notes</h2>
  * Methods in this package may throw {@link InvalidDeclarationError}, unless
- * otherwise specified this occurs when annotations are wrongs, methods or
+ * otherwise specified, this occurs when annotations are wrongs, methods or
  * fields are not public or entry points paths are messed up.
  * <p>
  * {@link EntryPoint#ROOT_ENTRY_POINT} can be used to define an entry point
@@ -125,17 +135,15 @@ public class ArgParser {
 
 	private final Class<?> entryPointClass;
 	private final String progName;
+	private final Object calleeInstance;
 	
-	private final Branch treeRoot = new Branch();
+	private final Branch treeRoot = new Branch("");
 	private final Map<Class<?>, ProcessOptions> optionClasses = new HashMap<>();
 	private final Map<String, Boolean> optionsTakingArguments = new HashMap<>();
 	
 	private PrintStream outputStream = System.out;
 	private PrintStream errorStream = System.err;
 	
-	// TODO have the output stream be a constructor argument
-	// TODO options lists (-a 1 -a 2 -a 3)
-
 	/**
 	 * Finds an entry point method in the calling class and executes it.
 	 * <p>
@@ -150,6 +158,15 @@ public class ArgParser {
 		}
 	}
 	
+	/**
+	 * Returns the name of the executable file containing this class, can be used as the
+	 * program name for {@code ArgParser}. For example, if running {@code java -jar argparser.jar}
+	 * this method will return {@code "argparser.jar"}.
+	 * <p>
+	 * If an error occurs, {@code "process"} will be returned instead
+	 * 
+	 * @return the name of the executable file containing this class
+	 */
 	public static String getExecutableName() {
 		try {
 			return new File(ArgParser.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getName();
@@ -159,8 +176,13 @@ public class ArgParser {
 	}
 	
 	public ArgParser(String progName, Class<?> entryPointClass) throws InvalidDeclarationError {
+		this(progName, entryPointClass, null);
+	}
+	
+	public ArgParser(String progName, Class<?> entryPointClass, Object calleeInstance) throws InvalidDeclarationError {
 		this.progName = Objects.requireNonNull(progName);
 		this.entryPointClass = Objects.requireNonNull(entryPointClass);
+		this.calleeInstance = calleeInstance;
 		populateEntryPoints();
 	}
 
@@ -198,7 +220,7 @@ public class ArgParser {
 		try {
 			ErrorWrapper errors = new ErrorWrapper("Invalid arguments", false);
 			
-			Map<String, String> options = new HashMap<>();
+			List<OptionKeyValuePair> options = new ArrayList<>();
 			List<String> entryArguments = new ArrayList<>();
 			
 			List<String> arguments = args == null ? Collections.emptyList() : new ArrayList<>(Arrays.asList(args));
@@ -218,7 +240,7 @@ public class ArgParser {
 			
 			if(isHelpPrint) {
 				if(entry == null)
-					outputStream.println(getUnfinishedPathUsage(arguments, arguments.size(), entryPointBranch));
+					outputStream.println(getUnfinishedPathUsage(entryPointBranch));
 				else
 					printEntryPointHelp(entry);
 				return true;
@@ -226,7 +248,7 @@ public class ArgParser {
 			
 			// validate that the entry point is valid and that there are enough arguments to match
 			if(entry == null) {
-				errors.addAndThrow(getUnfinishedPathUsage(arguments, arguments.size(), entryPointBranch));
+				errors.addAndThrow(getUnfinishedPathUsage(entryPointBranch));
 			} else if(entryArguments.size() + entry.optionalParamCount() < entry.normalParamCount()) {
 				for(int i = entryArguments.size(); i < entry.normalParamCount() - entry.optionalParamCount(); i++)
 					errors.add("Missing argument for <" + entry.getParamName(i+(entry.usesOptions()?1:0)) + ">");
@@ -256,7 +278,7 @@ public class ArgParser {
 			
 			try {
 				Branch branch = getEntrylessBranch(path);
-				ArgParserHelper.validateEntryMethodParameters(m);
+				ArgParserHelper.validateEntryMethodParameters(m, calleeInstance);
 				ProcessOptions opt = getOrCreateOptionClass(m);
 				branch.entryPoint = EntryPointFunction.createEntryPointFunction(m, opt);
 			} catch (NoSuchMethodException | SecurityException | IllegalArgumentException e) {
@@ -279,7 +301,7 @@ public class ArgParser {
 				
 				if(current.entryPoint != null)
 					throw new InvalidDeclarationError("Branch '" + path.substring(0, pl) + "' has a declared entry point, it cannot have sub-paths");
-				current = current.subBranches.computeIfAbsent(p, _p -> new Branch());
+				current = current.subBranches.computeIfAbsent(p, _p -> new Branch(_p));
 				pl += p.length()+1;
 			}
 		}
@@ -296,8 +318,11 @@ public class ArgParser {
 			return null;
 		Class<?> optionsType = method.getParameterTypes()[0];
 		ProcessOptions optionsClass = optionClasses.get(optionsType);
-		if(optionsClass == null)
-			optionsClass = ProcessOptions.createOptionsClass(optionsType);
+		if(optionsClass != null)
+			return optionsClass;
+		
+		optionsClass = ProcessOptions.createOptionsClass(optionsType);
+		optionClasses.put(optionsType, optionsClass);
 		for(Entry<String, Field> option : optionsClass.getOptionFields().entrySet()) {
 			String optName = option.getKey();
 			Boolean alreadyDefinedTakesArg = optionsTakingArguments.get(optName);
@@ -307,11 +332,10 @@ public class ArgParser {
 						+ " only one taking an argument: second occurence" + option.getValue());
 			optionsTakingArguments.put(optName, takesArg);
 		}
-		optionClasses.put(optionsType, optionsClass);
 		return optionsClass;
 	}
 	
-	private static Object[] createArgsArray(ErrorWrapper errors, EntryPointFunction entry, Map<String, String> options, List<String> argumentsStrings) throws WrappedException {
+	private static Object[] createArgsArray(ErrorWrapper errors, EntryPointFunction entry, List<OptionKeyValuePair> options, List<String> argumentsStrings) throws WrappedException {
 		
 		Object[] arguments = new Object[entry.totalParameterCount()];
 		int argIdx = 0;
@@ -324,7 +348,7 @@ public class ArgParser {
 		if(entry.usesOptions())
 			arguments[argIdx++] = OptionsHelper.createOptionsInstance(options, entry.getOptions(), errors);
 		else if(!options.isEmpty())
-			errors.addAndThrow("Unexpected options: " + StringUtils.join(", ", options.keySet()));
+			errors.addAndThrow("Unexpected options: " + StringUtils.join(", ", options, t -> t.name));
 		
 		for(int i = 0; i < argumentsStrings.size(); i++) {
 			if(argIdx == entry.totalParameterCount()-1 && entry.acceptsVarArgs()) {
@@ -367,9 +391,12 @@ public class ArgParser {
 		return arguments;
 	}
 	
-	private static void runCommand(EntryPointFunction entry, Object[] argsArray) {
+	private void runCommand(EntryPointFunction entry, Object[] argsArray) {
 		try {
-			entry.getMethod().invoke(null, argsArray);
+			if (Modifier.isStatic(entry.getMethod().getModifiers()))
+				entry.getMethod().invoke(null, argsArray);
+			else
+				entry.getMethod().invoke(calleeInstance, argsArray);
 		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 			if(e.getCause() instanceof Error) {
 				cleanStackTrace(e.getCause());
@@ -416,32 +443,33 @@ public class ArgParser {
 		t.setStackTrace(ArrayOperator.filter(trace, el -> !filteredClassNames.contains(el.getClassName())));
 	}
 	
-	private Branch readArguments(ErrorWrapper errors, List<String> args, Map<String, String> outOptions, List<String> outArguments) throws WrappedException {
+	private Branch readArguments(ErrorWrapper errors, List<String> args, List<OptionKeyValuePair> outOptions, List<String> outArguments) throws WrappedException {
 		
 		Branch currentBranch = treeRoot;
 		
 		boolean loggedPathError = false;
 		
-		for(int i = 0; i < args.size(); i++) {
-			String arg = args.get(i);
+		while (!args.isEmpty()) {
+			String arg = args.get(0);
 			
 			if(arg.startsWith("-")) {
-				// read an option (with or without value)
-				readOptionArg(i--, args, outOptions, errors);
+				// read and consume an option (with or without value)
+				readOptionArg(args, outOptions, errors);
 				
 			} else if(currentBranch.entryPoint == null) {
 				// search for the entry point
+				args.remove(0);
 				if(currentBranch.subBranches.containsKey(arg)) {
 					currentBranch = currentBranch.subBranches.get(arg);
 				} else if(!loggedPathError) {
-					errors.add("Unknown usage - " + arg + "\n" + getUnfinishedPathUsage(args, i, currentBranch));
+					errors.add("Unknown usage - " + arg + "\n" + getUnfinishedPathUsage(currentBranch));
 					loggedPathError = true;
 				}
 				
 			} else {
 				// read an argument
+				args.remove(0);
 				outArguments.add(arg);
-				args.remove(i--);
 			}
 		}
 		
@@ -449,19 +477,19 @@ public class ArgParser {
 		return currentBranch;
 	}
 	
-	private void readOptionArg(int position, List<String> args, Map<String, String> outOptions, ErrorWrapper errors) {
-		String option = args.remove(position);
+	private void readOptionArg(List<String> args, List<OptionKeyValuePair> outOptions, ErrorWrapper errors) {
+		String option = args.remove(0);
 		
 		// read combined notation -abc
 		if(!option.startsWith("--")) {
 			char[] chars = option.toCharArray();
 			for(int i = 1; i < chars.length-1; i++) {
-				String copt = "-" + chars[i];
+				String opt = "-" + chars[i];
 				Boolean takesArgument = optionsTakingArguments.get(option);
 				if(takesArgument != null && takesArgument) {
-					errors.add("Option " + copt + " requires a value");
+					errors.add("Option " + opt + " requires a value");
 				} else {
-					outOptions.put(copt, null);
+					outOptions.add(new OptionKeyValuePair(opt));
 				}
 			}
 			option = "-" + chars[chars.length-1];
@@ -469,14 +497,14 @@ public class ArgParser {
 		
 		Boolean takesArgument = optionsTakingArguments.get(option);
 		if(takesArgument != null && takesArgument) {
-			if(position == args.size()) {
+			if(args.isEmpty()) {
 				errors.add("Option " + option + " requires a value");
 			} else {
-				String nextArg = args.remove(position);
-				outOptions.put(option, nextArg);
+				String nextArg = args.remove(0);
+				outOptions.add(new OptionKeyValuePair(option, nextArg));
 			}
 		} else {
-			outOptions.put(option, null);
+			outOptions.add(new OptionKeyValuePair(option));
 		}
 	}
 	
@@ -553,23 +581,16 @@ public class ArgParser {
 			outputStream.println(doc.doc());
 		EntryPointFunction entry = treeRoot.entryPoint;
 		if(entry == null) {
-			outputStream.println(getUnfinishedPathUsage(Collections.emptyList(), 0, treeRoot));
+			outputStream.println(getUnfinishedPathUsage(treeRoot));
 		} else {
 			printEntryPointHelp(entry);
 		}
 	}
 	
-	private String getUnfinishedPathUsage(List<String> args, int readCount, Branch currentBranch) {
-		return "Usage: " + getCurrentPathString(args, readCount) + " "
+	private String getUnfinishedPathUsage(Branch currentBranch) {
+		return "Usage: " + currentBranch.path + " "
 				+ StringUtils.join("|", currentBranch.subBranches.keySet())
 				+ " ...\nUse '" + progName + " --help <cmd>' for help";
-	}
-	
-	private String getCurrentPathString(List<String> args, int readCount) {
-		String s = progName;
-		for(int i = 0; i < readCount; i++)
-			s += " " + args.get(i);
-		return s;
 	}
 	
 	private String getEntryUsage(EntryPointFunction entry) {
@@ -604,6 +625,11 @@ public class ArgParser {
 class Branch {
 	
 	final Map<String, Branch> subBranches = new HashMap<>(0);
+	final String path;
 	EntryPointFunction entryPoint = null;
+	
+	Branch(String path) {
+		this.path = Objects.requireNonNull(path);
+	}
 	
 }

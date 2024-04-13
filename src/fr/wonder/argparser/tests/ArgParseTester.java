@@ -6,6 +6,10 @@ import fr.wonder.argparser.ArgParser;
 import fr.wonder.argparser.InvalidDeclarationError;
 import fr.wonder.argparser.utils.StringUtils;
 
+/*
+ * I could not be bothered with a fully-fledged testing suite, this one will do
+ * and be enough to showcase a few examples of what can be done using ArgParser.
+ */
 public class ArgParseTester {
 	
 	private final Class<?> testedClass;
@@ -25,7 +29,7 @@ public class ArgParseTester {
 		if (verbose) {
 			System.out.println(header + '\n');
 			try {
-				new ArgParser(ArgParser.getExecutableName(), testedClass)
+				new ArgParser(ArgParser.getExecutableName(), testedClass, this)
 					.run(args);
 			} catch (InvalidDeclarationError e) {
 				e.printStackTrace();
@@ -36,7 +40,7 @@ public class ArgParseTester {
 		} else {
 			PrintStream voidStream = new PrintStream(PrintStream.nullOutputStream());
 			try {
-				boolean success = new ArgParser(ArgParser.getExecutableName(), testedClass)
+				boolean success = new ArgParser(ArgParser.getExecutableName(), testedClass, this)
 						.setErrorStream(voidStream)
 						.setOutputStream(voidStream)
 						.run(args);
@@ -49,7 +53,6 @@ public class ArgParseTester {
 			} catch (InvalidDeclarationError e) {
 				if (expectSuccess) {
 					System.out.println("fail : expected success but got " + e.getClass().getSimpleName() + " " + header);
-//					e.printStackTrace(System.out);
 				} else {
 					System.out.println("success : expected fail and got " + e.getClass().getSimpleName() + " " + header);
 				}

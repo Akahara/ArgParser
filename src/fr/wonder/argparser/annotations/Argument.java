@@ -21,7 +21,7 @@ public @interface Argument {
 	
 	/**
 	 * Can be used in {@link #defaultValue()} to indicate that the default
-	 * value is the empty string.
+	 * value is the empty string, or an empty array for varargs/array types.
 	 * 
 	 * <p>Simply having {@code @Argument(defaultValue="")} won't do because
 	 * it would be interpreted as not having specified {@code defaultValue}

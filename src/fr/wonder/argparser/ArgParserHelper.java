@@ -11,21 +11,23 @@ import fr.wonder.argparser.utils.PrimitiveUtils;
 
 public class ArgParserHelper {
 
-	public static void validateEntryMethodParameters(Method method) throws NoSuchMethodException, SecurityException {
-		if(!Modifier.isStatic(method.getModifiers()))
+	public static void validateEntryMethodParameters(Method method, Object calleeInstance) throws NoSuchMethodException, SecurityException {
+		boolean isStaticMethod = Modifier.isStatic(method.getModifiers());
+		if(calleeInstance == null && !isStaticMethod)
 			throw new IllegalArgumentException("Method " + method + " cannot be accessed statically");
-		if(!method.trySetAccessible() || !method.canAccess(null))
+		if(!method.trySetAccessible() || !method.canAccess(isStaticMethod ? null : calleeInstance))
 			throw new IllegalArgumentException("Method " + method + " cannot be accessed");
 		Parameter[] params = method.getParameters();
 		
 		for(int i = doesMethodUseOptions(method) ? 1 : 0; i < params.length; i++) {
 			Class<?> type = params[i].getType();
 			
-			if(i == params.length-1 && method.isVarArgs())
-				type = type.componentType(); // for varargs check that the component type is valid
-			
-			if(!canBeArgumentType(type, i==0)) {
-				throw new IllegalArgumentException("Argument " + params[i].getName() + " has an invalid type " + type.getName()
+			if(!canBeArgumentType(type, i==0, i==params.length-1)) {
+				if (type.isArray() && i != params.length - 1)
+					throw new IllegalArgumentException("Argument " + params[i].getName() + " has an invalid type " + type.getName()
+						+ ", only the last argument can be of array type");
+				else
+					throw new IllegalArgumentException("Argument " + params[i].getName() + " has an invalid type " + type.getName()
 						+ (type.isAnnotationPresent(OptionClass.class) ? ", only the first argument can be a @OptionClass" : ""));
 			}
 		}
@@ -52,12 +54,13 @@ public class ArgParserHelper {
 	}
 
 	/** Does not check for arrays, methods using varargs have an array as their last parameter */
-	public static boolean canBeArgumentType(Class<?> type, boolean acceptsOptionClass) {
+	public static boolean canBeArgumentType(Class<?> type, boolean acceptsOptionClass, boolean acceptsArray) {
 		return type == String.class ||
 				type == File.class ||
 				type.isEnum() ||
 				PrimitiveUtils.isPrimitiveType(type) ||
-				(acceptsOptionClass && type.isAnnotationPresent(OptionClass.class));
+				(acceptsOptionClass && type.isAnnotationPresent(OptionClass.class)) ||
+				(type.isArray() && canBeArgumentType(type.componentType(), false, false));
 	}
 
 	public static boolean doesMethodUseOptions(Method method) {

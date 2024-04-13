@@ -18,14 +18,14 @@ import fr.wonder.argparser.utils.StringUtils;
 		+ "an entry point, or --help is used\n"
 		+ "on the root branch\n"
 		+ "----------------------------------\n")
-public class ProcessArguments extends ArgParseTester {
+public class ProcessArgumentsGeneral extends ArgParseTester {
 	
-	public ProcessArguments(boolean verbose) {
-		super(ProcessArguments.class, verbose);
+	public ProcessArgumentsGeneral(boolean verbose) {
+		super(ProcessArgumentsGeneral.class, verbose);
 	}
 	
 	public static void main(String[] args) {
-		new ProcessArguments(false)
+		new ProcessArgumentsGeneral(true)
 			.test(true,  "test2 enum E1")               // O
 			.test(false, "test2 enum E1 e2")            // X too many arguments
 			.test(false, "test2 enum a")                // X invalid enum value
@@ -95,8 +95,8 @@ public class ProcessArguments extends ArgParseTester {
 			+ "for help for the 'print' entry point, for\n"
 			+ "example using '--help print'.";
 
-	@Argument(name = "i", desc = "i argument", defaultValue = "4")
 	@EntryPoint(path = "print", help = PRINT_ENTRY_HELP)
+	@Argument(name = "i", desc = "i argument", defaultValue = "4")
 	public static void print(Options opt, int i) {
 		if (verbose) {
 			System.out.println("called a with " + i);
@@ -104,9 +104,9 @@ public class ProcessArguments extends ArgParseTester {
 		}
 	}
 	
+	@EntryPoint(path = "test")
 	@Argument(name = "i", desc = "i argument")
 	@Argument(name = "j", desc = "j argument")
-	@EntryPoint(path = "test")
 	public static void test(Options opt, int i, int j) {
 		if (verbose) {
 			System.out.println("called b with " + i + " " + j);
@@ -114,30 +114,30 @@ public class ProcessArguments extends ArgParseTester {
 		}
 	}
 
-	@Argument(name = "f", desc = "file argument")
 	@EntryPoint(path = "test2 file")
+	@Argument(name = "f", desc = "file argument")
 	public static void test2file(File f) {
 		if (verbose)
 			System.out.println("called test2file with " + f);
 	}
 	
-	@Argument(name = "f", desc = "file argument")
 	@EntryPoint(path = "test2 array")
+	@Argument(name = "f", desc = "file argument")
 	public static void test2array(String f) {
 		if (verbose)
 			System.out.println("called test2array with " + f);
 	}
 	
-	@Argument(name = "f", desc = "enum argument")
 	@EntryPoint(path = "test2 enum")
+	@Argument(name = "f", desc = "enum argument")
 	public static void test2enum(EnumFoo f) {
 		if (verbose)
 			System.out.println("called test2enum with " + f);
 	}
 	
+	@EntryPoint(path = "testempty")
 	@Argument(name = "first", defaultValue = "defaultS1")
 	@Argument(name = "second", defaultValue = Argument.DEFAULT_EMPTY)
-	@EntryPoint(path = "testempty")
 	public static void testEmptyString(String s1, String s2) {
 		if (verbose)
 			System.out.println("called testempty with s1='" + s1 + "' s2='" + s2 + "'");

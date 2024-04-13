@@ -34,8 +34,6 @@ class EntryPointFunction {
 		if(argumentsAnnotations == null)
 			return new EntryPointFunction(method, options, null, defaultValues, 0);
 		
-		// Assertions.assertTrue(argumentsAnnotations.length == method.getParameterCount());
-		
 		int optionalArgsCount = 0;
 		for(int i = method.getParameterCount()-1; i >= (usesOptions?1:0) && !argumentsAnnotations[i].defaultValue().isEmpty(); i--) {
 			Parameter parameter = method.getParameters()[i];
@@ -121,8 +119,9 @@ class EntryPointFunction {
 		return options;
 	}
 
+	// Returns true if the method takes a last arguments that is either an array of varargs
 	public boolean acceptsVarArgs() {
-		return method.isVarArgs();
+		return method.isVarArgs() || (method.getParameterCount() > 0 && method.getParameters()[method.getParameterCount()-1].getType().isArray());
 	}
 
 	public int totalParameterCount() {

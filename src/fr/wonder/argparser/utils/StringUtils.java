@@ -289,7 +289,7 @@ public class StringUtils {
 	 * 
 	 * @see #splitWithQuotes(String, String, char[])
 	 */
-	public static String[] splitWithQuotes(String text, String separator) throws IllegalArgumentException {
+	public static String[] splitWithQuotes(String text, String separator) {
 		return splitWithQuotes(text, separator, new char[] { '\'', '"' });
 	}
 	
@@ -304,7 +304,7 @@ public class StringUtils {
 	 * 
 	 * @see #splitWithQuotes(String, String, char[])
 	 */
-	public static String[] splitCLIArgs(String cliLine) throws IllegalArgumentException {
+	public static String[] splitCLIArgs(String cliLine) {
 		return splitWithQuotes(cliLine, " ");
 	}
 	
