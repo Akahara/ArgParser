@@ -448,13 +448,19 @@ public class ArgParser {
 		Branch currentBranch = treeRoot;
 		
 		boolean loggedPathError = false;
+		boolean foundOptionsEnd = false;
 		
 		while (!args.isEmpty()) {
 			String arg = args.get(0);
 			
-			if(arg.startsWith("-")) {
-				// read and consume an option (with or without value)
-				readOptionArg(args, outOptions, errors);
+			if(arg.startsWith("-") && !foundOptionsEnd) {
+				if (arg.equals("--")) {
+					args.remove(0);
+					foundOptionsEnd = true;
+				} else {
+					// read and consume an option (with or without value)
+					readOptionArg(args, outOptions, errors);
+				}
 				
 			} else if(currentBranch.entryPoint == null) {
 				// search for the entry point

@@ -53,6 +53,8 @@ public class ProcessArgumentsGeneral extends ArgParseTester {
 			.test(true,  "testempty")                   // O 2 default values
 			.test(true,  "testempty a")                 // O 1 default value
 			.test(true,  "testempty a b")               // O
+			.test(true,  "test3 true")                  // O truthy value
+			.test(true,  "test3 0")                     // O falsy value
 			;
 	}
 
@@ -141,6 +143,12 @@ public class ProcessArgumentsGeneral extends ArgParseTester {
 	public static void testEmptyString(String s1, String s2) {
 		if (verbose)
 			System.out.println("called testempty with s1='" + s1 + "' s2='" + s2 + "'");
+	}
+	
+	@EntryPoint(path = "test3")
+	public static void test3(boolean b) {
+		if (verbose)
+			System.out.println(b);
 	}
 	
 }

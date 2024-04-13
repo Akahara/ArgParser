@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import fr.wonder.argparser.annotations.Argument;
+import fr.wonder.argparser.utils.ArrayOperator;
 import fr.wonder.argparser.utils.ErrorWrapper;
 import fr.wonder.argparser.utils.ErrorWrapper.WrappedException;
 import fr.wonder.argparser.utils.PrimitiveUtils;
@@ -18,10 +19,22 @@ import fr.wonder.argparser.utils.UnreachableException;
 
 class OptionsHelper {
 
+	private static final String[] BOOLEAN_TRUE_VALUES = { "1", "true", "True" };
+	private static final String[] BOOLEAN_FALSE_VALUES = { "0", "false", "False" };
+
 	public static Object parseOptionValue(String argVal, Class<?> argType, String argName) throws ArgumentError {
 		boolean isDefaultEmptyValue = Argument.DEFAULT_EMPTY.equals(argVal);
 		
-		if(PrimitiveUtils.isPrimitiveType(argType)) {
+		if (argType == boolean.class || argType == Boolean.class) {
+			if(isDefaultEmptyValue)
+				throw new ArgumentError("Type " + argType.getCanonicalName() + " cannot be defaulted to empty for <" + argName + ">");
+			if (ArrayOperator.contains(BOOLEAN_TRUE_VALUES, argVal))
+				return true;
+			if (ArrayOperator.contains(BOOLEAN_FALSE_VALUES, argVal))
+				return false;
+			throw new ArgumentError("Expected true or false for <" + argName + ">, got '" + argVal + "'");
+			
+		} else if(PrimitiveUtils.isPrimitiveType(argType)) {
 			if(isDefaultEmptyValue)
 				throw new ArgumentError("Type " + argType.getCanonicalName() + " cannot be defaulted to empty for <" + argName + ">");
 			if(PrimitiveUtils.isFloatingPoint(argType)) {
