@@ -4,7 +4,7 @@ Utility to create command line interfaces.
 
 The basic idea is to define entry points in a class and call `ArgParser.runHere(/*...*/)` to run the right one with user-supplied arguments and options.
 
-Look [here](/src/wonder/argparser/tests/ProcessArgumentsGeneral.java) for an example.
+Look [here](/src/fr/wonder/argparser/tests/ArgParseExemple.java) for an example.
 
 Note that reflection is heavily used, impacting performances. This utility is
 not meant to be used often! It can still be used to run user commands on the
@@ -55,11 +55,11 @@ public void gitAdd(GitAddOptions options, String... paths) {
 - Options are defined in Option Classes using `@OptionClass`
 - Long option names must start with two dashes (`--name`) and are required, short options must start with a single dash and end with a single characted (`-v`)
 - `--help`, `help` and `?` are built-in to display help for an entry point or for the program, they cannot be used as options or entry point paths
-- In doubt see methods in [ArgParserHelper](/src/wonder/argparser/ArgParserHelper.java)
+- In doubt see methods in [ArgParserHelper](/src/fr/wonder/argparser/ArgParserHelper.java)
 - Supported option types are the same as argument types, arrays are supported, options that are specified multiple times will fill the array (eg. `-a val1 -a val2` becomes `String[]{"val1","val2"}`)
 - Option classes can be inherited by other option classes or contained as members using `@InnerOption`
 
-See the [here](/src/wonder/argparser/tests/ProcessArgumentsGeneral.java) for more details.
+See [ProcessArgumentsGeneral](/src/fr/wonder/argparser/tests/ProcessArgumentsGeneral.java), [ProcessArgumentsExotic](/src/fr/wonder/argparser/tests/ProcessArgumentsExotic.java) for examples with more details.
 
 
 ## Implementation notes
