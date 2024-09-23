@@ -1,4 +1,4 @@
-package fr.wonder.argparser.tests;
+package fr.wonder.argparser;
 
 import java.util.Arrays;
 
@@ -6,15 +6,14 @@ import fr.wonder.argparser.annotations.EntryPoint;
 import fr.wonder.argparser.annotations.InnerOptions;
 import fr.wonder.argparser.annotations.Option;
 import fr.wonder.argparser.annotations.OptionClass;
-import fr.wonder.argparser.tests.ProcessArgumentsGeneral.EnumFoo;
 import fr.wonder.argparser.utils.StringUtils;
+import org.junit.Test;
 
-public class ProcessArgumentsRootEntry extends ArgParseTester {
+import static fr.wonder.argparser.TestUtils.run;
 
-	public ProcessArgumentsRootEntry(boolean verbose) {
-		super(ProcessArgumentsRootEntry.class, verbose);
-	}
+public class RootEntryTest {
 
+	/*
 	public static void main(String[] args) {
 		new ProcessArgumentsRootEntry(false)
 			.test(true, "3")                  // O root entry point
@@ -25,6 +24,7 @@ public class ProcessArgumentsRootEntry extends ArgParseTester {
 			.test(true, "--suboption 2 .5")   // O fills an inner option
 		;
 	}
+	 */
 	
 	@OptionClass
 	public static class SubOptions {
@@ -53,7 +53,7 @@ public class ProcessArgumentsRootEntry extends ArgParseTester {
 		@Option(name = "--bool3", shorthand = "-q")
 		public boolean q = true;
 		@Option(name = "--opt", desc = "Enum")
-		public EnumFoo val4;
+		public GeneralArgumentsTests.EnumFoo val4;
 		@InnerOptions
 		public SubOptions suboptions;
 		
@@ -69,10 +69,20 @@ public class ProcessArgumentsRootEntry extends ArgParseTester {
 
 	@EntryPoint(path = EntryPoint.ROOT_ENTRY_POINT)
 	public static void rootEntryPoint(Options opt, float... varargs) {
-		if (verbose) {
-			System.out.println("called a with " + Arrays.toString(varargs));
-			System.out.println(opt);
-		}
+		System.out.println("called a with " + Arrays.toString(varargs));
+		System.out.println(opt);
 	}
-	
+
+	// ----------------- Tests for the above methods -----------------
+
+	@Test
+	public void test_rootEntryPoint() {
+		run(true, "3");
+		run(false, "");
+		run(false, "test2");
+		run(true, "1 2 2.5 3");
+		run(true, "--help");
+		run(true, "--suboption 2 .5");
+	}
+
 }

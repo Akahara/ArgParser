@@ -24,7 +24,6 @@ import fr.wonder.argparser.annotations.EntryPoint;
 import fr.wonder.argparser.annotations.Option;
 import fr.wonder.argparser.annotations.OptionClass;
 import fr.wonder.argparser.annotations.ProcessDoc;
-import fr.wonder.argparser.tests.ProcessArgumentsGeneral;
 import fr.wonder.argparser.utils.ArrayOperator;
 import fr.wonder.argparser.utils.ErrorWrapper;
 import fr.wonder.argparser.utils.ErrorWrapper.WrappedException;
@@ -37,10 +36,7 @@ import fr.wonder.argparser.utils.StringUtils;
  * <p>
  * The basic idea is to define entry points in a class and call {@link #run(String[])}
  *  to run the right one with user-supplied arguments and options.
- * 
- * <p>
- * Look into {@link ProcessArgumentsGeneral} for an example.
- * 
+ *
  * <p>
  * Note that reflection is heavily used, impacting performances. This utility is
  * not meant to be used often! It can still be used to run user commands on the

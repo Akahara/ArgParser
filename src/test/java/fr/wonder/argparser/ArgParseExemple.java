@@ -1,20 +1,19 @@
-package fr.wonder.argparser.tests;
+package fr.wonder.argparser;
 
-import fr.wonder.argparser.ArgParser;
-import fr.wonder.argparser.InvalidDeclarationError;
+import fr.wonder.argparser.annotations.EntryPoint;
+import fr.wonder.argparser.annotations.Option;
+import fr.wonder.argparser.annotations.OptionClass;
+
+import java.io.File;
 
 /**
  * This is a minimal exemple or entrypoints and option classes,
- * see ProcessArgumentsGeneral for more detailed uses.
+ * see {@link GeneralArgumentsTests} for more detailed uses.
  */
 public class ArgParseExemple {
   
   public static void main(String[] args) {
-    try {
-      ArgParser.runHere(args);
-		} catch (InvalidDeclarationError e) {
-			e.printStackTrace();
-		}
+    ArgParser.runHere(args);
   }
 
   @OptionClass
@@ -29,4 +28,10 @@ public class ArgParseExemple {
   public void gitAdd(GitAddOptions options, String... paths) {
     System.out.println("You called 'git add' with force=" + options.force + " interactive=" + options.interactive + " and " + paths.length + " paths");
   }
+
+  @EntryPoint(path = "clone")
+  public void gitClone(String source, File destination) {
+    System.out.println("You called 'git clone' from '" + source + "' to '" + destination.getAbsolutePath() + "'");
+  }
+
 }
